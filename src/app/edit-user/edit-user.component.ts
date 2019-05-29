@@ -1,0 +1,110 @@
+import { Component, OnInit } from '@angular/core';
+import { Router, ActivatedRoute } from '@angular/router';
+import { FirebaseService } from '../services/firebase.service';
+import { FormGroup, FormControl, Validators } from '@angular/forms';
+import { MatDialog } from '@angular/material';
+import { AvatarDialogComponent } from '../avatar-dialog/avatar-dialog.component'
+
+@Component({
+  selector: 'app-edit-user',
+  templateUrl: './edit-user.component.html',
+  styleUrls: ['./edit-user.component.css']
+})
+export class EditUserComponent implements OnInit {
+
+  validation_messages = {
+    'name': [
+      { type: 'required', message: 'Name is required.' }
+    ],
+    'surname': [
+      { type: 'required', message: 'Surname is required.' }
+    ],
+    'age': [
+      { type: 'required', message: 'Age is required.' },
+    ]
+  }
+
+  item: any;
+
+  exampleForm: FormGroup;
+  name: FormControl;
+  surname: FormControl;
+  age: FormControl;
+
+  constructor(
+    public dialog: MatDialog,
+    public firebaseService: FirebaseService,
+    public router : Router,
+    public route: ActivatedRoute
+  ) { }
+
+  ngOnInit() {
+    this.route.data.subscribe(routeData => {
+     let data = routeData['data'];
+     if (data) {
+       this.item = data.payload.data();
+       this.item.id = data.payload.id;
+
+       this.createFormControls();
+       this.createForm();
+     }
+    })
+  }
+
+  createFormControls = () => {
+    this.name = new FormControl(this.item.name, Validators.required);
+    this.surname = new FormControl(this.item.surname, Validators.required);
+    this.age = new FormControl(this.item.age, Validators.required)
+  }
+
+  createForm = () => {
+    this.exampleForm = new FormGroup({
+      name : this.name,
+      surname: this.surname,
+      age: this.age
+    })
+  }
+
+  openDialog() {
+    const dialogRef = this.dialog.open(AvatarDialogComponent, {
+      height: '400px',
+      width: '400px'
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if(result){
+        this.item.avatar = result.link;
+      }
+    });
+  }
+
+
+  onSubmit(value){
+    value.avatar = this.item.avatar;
+    value.age = Number(value.age);
+    this.firebaseService.updateUser(this.item.id, value)
+    .then(
+      res => {
+        this.router.navigate(['/home']);
+      }
+    )
+  } 
+
+  delete(){
+    this.firebaseService.deleteUser(this.item.id)
+    .then(
+      res => {
+        this.router.navigate(['/home']);
+      },
+      err => {
+        console.log(err);
+      }
+    )
+  }
+
+  cancel(){
+    this.router.navigate(['/home']);
+  }
+  
+
+}
